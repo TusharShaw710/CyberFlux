@@ -146,7 +146,7 @@ export async function verifyEmail(req,res) {
   const html = `
     <p>Hi ${user.username},</p>
     <p>Your email has been successfully verified! You can now log in to your account and start using our services.</p>
-    <p><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login">Login Now</a></p>
+    <p><a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login">Login Now</a></p>
     <p>If you did not create an account with us, please ignore this message.</p>
     <p>Best regards,<br>The Team</p>
   `;

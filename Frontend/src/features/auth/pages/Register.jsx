@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { DynamicForm } from '../components/form'
 import {useAuth} from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import CyberfluxLoader from '../components/CyberfluxLoader';
 
 const registerFields = [
   {
