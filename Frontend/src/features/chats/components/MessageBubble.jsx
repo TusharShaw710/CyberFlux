@@ -4,11 +4,13 @@ import remarkGfm from 'remark-gfm'
 import { Mail } from 'lucide-react'
 import { EmailModal } from './EmailModal'
 import { Toast } from './Toast'
+import { useSelector } from 'react-redux' 
 
 export const MessageBubble = ({ message, role, isStreaming = false }) => {
   const [displayCursor, setDisplayCursor] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const isGmailConnected=useSelector((state)=>state.chat.isGmailConnected);
 
   useEffect(() => {
     if (isStreaming) {
@@ -72,7 +74,7 @@ export const MessageBubble = ({ message, role, isStreaming = false }) => {
               }`} />
             )}
             
-            {!isStreaming && (
+            {!isStreaming && isGmailConnected && (
               <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
                 <button 
                   onClick={() => setIsEmailModalOpen(true)}

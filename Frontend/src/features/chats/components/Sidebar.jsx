@@ -3,7 +3,7 @@ import { Plus,Folder,X,Mail } from 'lucide-react'
 import { UserProfile } from './UserProfile'
 import { GmailConnectModal } from './GmailConnectModal'
 import { useSelector,useDispatch } from 'react-redux'
-import { setCurrentChatId } from '../chat.slice'
+import { setCurrentChatId,setGmailConnected } from '../chat.slice'
 import useChat from '../hooks/useChat';
 
 
@@ -13,12 +13,13 @@ export const Sidebar = () => {
     const {openChat,handleDeleteChat,handleGetChat}=useChat();
     
     const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
-    const [isGmailConnected, setIsGmailConnected] = useState(false);
+    // const [isGmailConnected, setIsGmailConnected] = useState(false);
+    const isGmailConnected=useSelector((state)=>state.chat.isGmailConnected);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('gmail') === 'connected') {
-            setIsGmailConnected(true);
+            dispatch(setGmailConnected(true));
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, []);
