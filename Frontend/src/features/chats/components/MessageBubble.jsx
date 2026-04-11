@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Mail } from 'lucide-react'
+import { EmailModal } from './EmailModal'
+import { Toast } from './Toast'
 
 export const MessageBubble = ({ message, role, isStreaming = false }) => {
   const [displayCursor, setDisplayCursor] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     if (isStreaming) {
@@ -66,9 +71,33 @@ export const MessageBubble = ({ message, role, isStreaming = false }) => {
                 displayCursor ? 'opacity-100' : 'opacity-0'
               }`} />
             )}
+            
+            {!isStreaming && (
+              <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
+                <button 
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="flex items-center gap-2 text-xs font-medium text-gray-400 hover:text-[#00FFC2] transition-colors"
+                >
+                  <Mail size={14} /> Share via Email
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <EmailModal 
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        message={message}
+        onSuccess={() => setShowToast(true)}
+      />
+      {showToast && (
+        <Toast 
+          message="Email request sent successfully 📧" 
+          onClose={() => setShowToast(false)} 
+        />
+      )}
     </div>
   )
 }

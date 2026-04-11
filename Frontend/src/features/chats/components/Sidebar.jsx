@@ -1,6 +1,7 @@
-import React from 'react'
-import { Plus,Folder,X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus,Folder,X,Mail } from 'lucide-react'
 import { UserProfile } from './UserProfile'
+import { GmailConnectModal } from './GmailConnectModal'
 import { useSelector,useDispatch } from 'react-redux'
 import { setCurrentChatId } from '../chat.slice'
 import useChat from '../hooks/useChat';
@@ -10,6 +11,17 @@ export const Sidebar = () => {
     const chats=useSelector((state)=>state.chat.chats);
     const dispatch=useDispatch();
     const {openChat,handleDeleteChat,handleGetChat}=useChat();
+    
+    const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
+    const [isGmailConnected, setIsGmailConnected] = useState(false);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('gmail') === 'connected') {
+            setIsGmailConnected(true);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
     
     const recentClusters = chats ? Object.values(chats)
         .filter(chat => chat && chat.updatedAt) // Use updatedAt from MongoDB timestamps
@@ -73,10 +85,31 @@ export const Sidebar = () => {
                   </div>
                 ))}
             </div>
+
+            {/* Gmail Connect Button */}
+            <div className="mt-8">
+                {isGmailConnected ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+                        <span className="text-lg">✅</span> Gmail Connected
+                    </div>
+                ) : (
+                    <button 
+                        onClick={() => setIsGmailModalOpen(true)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-[#00FFC2]/50 text-gray-400 hover:text-[#00FFC2] transition-all duration-300 group shadow-lg"
+                    >
+                        <Mail size={16} className="group-hover:text-[#00FFC2] transition-colors" />
+                        <span className="text-sm font-medium">Connect Gmail</span>
+                    </button>
+                )}
+            </div>
     </div>
 
       {/* Bottom Section - User Profile */}
       <UserProfile />
+      <GmailConnectModal 
+        isOpen={isGmailModalOpen} 
+        onClose={() => setIsGmailModalOpen(false)} 
+      />
     </div>
   )
 }

@@ -170,8 +170,16 @@ const useChat=()=>{
         }
     }
 
+    async function handleSendEmail(to,subject,message){
+        try{
+            await sendEmail(to,subject,message);
+        } catch (error) {
+            console.error("Error sending email:", error);
+        }
+    }
 
-    return { handleSendMessage, handleSendMessageStream, initClient, handleGetChat, openChat, handleDeleteChat };
+
+    return { handleSendMessage, handleSendMessageStream, initClient, handleGetChat, openChat, handleDeleteChat, handleSendEmail };
 }
 
 export default useChat;
