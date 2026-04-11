@@ -5,7 +5,7 @@ import {authenticateToken} from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/send", authenticateToken, sendEmail);
+
 router.post("/send-by-user", authenticateToken, sendEmailByUser);
 
 
