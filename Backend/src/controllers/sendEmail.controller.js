@@ -1,6 +1,8 @@
 import { google } from "googleapis";
 import { oauth2Client } from "../utils/gmail.js";
 import userEmailModel from "../models/userEmail.model.js";
+import { cyberfluxTemplate } from "../utils/emailTemplate.js";
+import {marked} from "marked";
 
 export const sendEmailByUser = async (req, res) => {
     try {
@@ -27,13 +29,16 @@ export const sendEmailByUser = async (req, res) => {
             auth: oauth2Client
         });
 
+        const formattedMessage = marked.parse(message);
+        const htmlMessage = cyberfluxTemplate({ message: formattedMessage });
+
         // 4️⃣ Format email
         const email = [
             `From: ${user.email}`,
             `To: ${to}`,
             `Subject: ${subject}`,
-            "",
-            message
+            "Content-Type: text/html; charset=utf-8",
+            htmlMessage
         ].join("\n");
 
         const encodedMessage = Buffer.from(email)

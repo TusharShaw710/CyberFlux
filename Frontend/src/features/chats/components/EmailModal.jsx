@@ -19,7 +19,7 @@ export const EmailModal = ({ isOpen, onClose, message, onSuccess }) => {
     setError(null);
 
     try {
-      await handleSendEmail(to, "Cyberflux Response ⚡", message);
+      await handleSendEmail(to, "Cyberflux Response ", message);
       
       onSuccess();
       onClose();
