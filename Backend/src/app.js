@@ -16,11 +16,29 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://cyber-flux.vercel.app',
+  'https://cyber-flux-crmi.vercel.app',
+  process.env.CLIENT_URL
+].filter(Boolean); // Filter out empty values
+
 app.use(cors({
-  origin: 'https://cyber-flux.vercel.app', 
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin matches any allowed origin or is a Vercel preview
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type'] // Important for SSE/Streaming
 }));
 
 // Routes
