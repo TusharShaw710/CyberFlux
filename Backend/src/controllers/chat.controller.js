@@ -1,72 +1,15 @@
 import { getResponse, getResponseStream, getChatTitle } from "../services/ai.service.js";
 import messageModel from "../models/message.model.js";
 import chatModel from "../models/chat.model.js";
+import { processFileWithAI } from "../services/fileAI.service.js";
 
-async function sendMessage(req,res){
-    try{
-        const { message,chatId:chatId } = req.body || {};
-        if(!message){
-            return res.status(400).json({
-                message:"Message is required"
-            });
-        }
-
-        let title=null,chat=null;
-
-        if(!chatId){
-            title=await getChatTitle(message);
-            chat=await chatModel.create({
-            title:title,
-            user:req.user.id
-        });
-        }else{
-            chat= await chatModel.findById(chatId);
-        }
-        const userMessage=await messageModel.create({
-            chat:chatId || chat._id,
-            role:"user",
-            content:message
-        });
-
-        const allUserMessages=await messageModel.find({chat:chatId || chat._id});
-
-        if(!title){
-            const chatData = await chatModel.findById(chatId).select("title");
-            title = chatData.title;
-        }
-
-        const response=await getResponse(allUserMessages);
-
-        if(!response){
-            return res.status(500).json({
-                message:"Failed to get AI response"
-            });
-        }
-
-        await messageModel.create({
-            chat:chatId || chat._id,
-            role:"ai",
-            content:response
-        });
-        res.status(200).json({
-            success: true,
-            chat:chat,
-            aiMessage:response       
-        }); 
-    }catch(err){
-        console.error('Error in sendMessage:', err.message);
-        res.status(500).json({
-            message: err.message || "Failed to send message"
-        });
-    }
-}
-
-async function sendMessageStream(req,res){
+async function sendMessageUnified(req,res){
     try{
         const { message, chatId } = req.body || {};
-        if(!message){
+        
+        if(!message && !req.file){
             return res.status(400).json({
-                message:"Message is required"
+                message:"Message or file is required"
             });
         }
 
@@ -77,9 +20,20 @@ async function sendMessageStream(req,res){
 
         let title = null, chat = null;
 
+        // Extract File if exists
+        let finalMessage = message || "";
+        if (req.file) {
+            try {
+                const fileSummary = await processFileWithAI(req.file.path, req.file.mimetype);
+                finalMessage += finalMessage ? `\n\n[Attached File Content/Analysis]:\n${fileSummary}` : `[Attached File Content/Analysis]:\n${fileSummary}`;
+            } catch (err) {
+                console.error("Error processing file", err);
+            }
+        }
+
         // Create or get chat
         if(!chatId){
-            title = await getChatTitle(message);
+            title = await getChatTitle(finalMessage);
             chat = await chatModel.create({
                 title: title,
                 user: req.user.id
@@ -92,7 +46,7 @@ async function sendMessageStream(req,res){
         const userMessage = await messageModel.create({
             chat: chatId || chat._id,
             role: "user",
-            content: message
+            content: finalMessage
         });
 
         // Get all messages for context
@@ -147,11 +101,19 @@ async function sendMessageStream(req,res){
             res.end();
         }
     }catch(err){
-        console.error('Error in sendMessageStream:', err.message);
-        res.setHeader('Content-Type', 'application/json');
-        res.status(500).json({
-            message: err.message || "Failed to stream message"
-        });
+        console.error('Error in sendMessageUnified:', err.message);
+        if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json');
+            res.status(500).json({
+                message: err.message || "Failed to stream message"
+            });
+        } else {
+            res.write(`data: ${JSON.stringify({
+                type: 'error',
+                message: err.message || 'Server Error'
+            })}\n\n`);
+            res.end();
+        }
     }
 }
 
@@ -246,4 +208,4 @@ async function getChatDelete(req,res){
     });
 }
 
-export { sendMessage, sendMessageStream, getChat, getMessage, getChatId, getChatDelete };
+export { sendMessageUnified, getChat, getMessage, getChatId, getChatDelete };

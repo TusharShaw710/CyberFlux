@@ -1,21 +1,16 @@
 import express from 'express';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import { getChat, sendMessage, sendMessageStream, getMessage, getChatId, getChatDelete } from '../controllers/chat.controller.js';
+import { getChat, sendMessageUnified, getMessage, getChatId, getChatDelete } from '../controllers/chat.controller.js';
+import { upload } from '../utils/upload.js';
 
 const router=express.Router();
 
 /**
- * @route POST /api/chats/messages
- * @desc Get AI response for a user message
- * @access Private
-  */
-router.post("/messages",authenticateToken,sendMessage);
-/**
- * @route POST /api/chats/messages-stream
- * @desc Stream AI response for a user message (Server-Sent Events)
+ * @route POST /api/chat/
+ * @desc Stream AI response for a user message + optional file upload (Server-Sent Events)
  * @access Private
  */
-router.post("/messages-stream",authenticateToken,sendMessageStream);
+router.post("/", authenticateToken, upload.single("file"), sendMessageUnified);
 /**
  * @route GET /api/chats/get-chat/:chatId
  * @desc Get a specific chat by ID

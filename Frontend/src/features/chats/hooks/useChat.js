@@ -1,47 +1,13 @@
 import { initClient } from "../services/chat.socket";
-import { sendMessage, sendMessageStream, getMessage, getChat, getChatId, deleteChat } from "../services/chat.api";
+import { sendMessageStream, getMessage, getChat, getChatId, deleteChat } from "../services/chat.api";
 import { useDispatch } from "react-redux";
 import { setLoading, setChats, setCurrentChatId, setError, createNewChat, addNewMessage, addMessages, setThinking, addStreamingToken, clearStreamingMessage } from "../chat.slice";
 
 const useChat=()=>{
     const dispatch=useDispatch();
 
-    async function handleSendMessage(message,chatId){
-        dispatch(setLoading(true));
-        try{
-            const data=await sendMessage(message,chatId);
-            const {chat,aiMessage}=data;
-            // Only create chat if it doesn't already exist
-            if(!chatId){
-                dispatch(createNewChat({
-                    chatId:chat._id,
-                    title:chat.title,
-                    updatedAt:chat.updatedAt
-                }));
-                chatId = chat._id;
-            }
-            dispatch(addNewMessage({
-                chatId:chatId,
-                message:message,
-                role:"user"
-            }));
-            dispatch(addNewMessage({
-                chatId:chatId,
-                message:aiMessage,
-                role:"ai"
-            }));
 
-            dispatch(setCurrentChatId(chatId));
-
-        }catch(err){
-            console.log(err);
-            dispatch(setError("Failed to send message. Please try again."));
-        }finally{
-            dispatch(setLoading(false));
-        }
-    }
-
-    async function handleSendMessageStream(message, chatId) {
+    async function handleSendMessageStream(message, chatId, file) {
         dispatch(setThinking(true));
         let streamStarted = false;
         let finalChatId = chatId;
@@ -52,6 +18,7 @@ const useChat=()=>{
             sendMessageStream(
                 message,
                 chatId,
+                file,
                 (token) => {
                     // Handle different token types
                     if (typeof token === 'object' && token.type === 'chat_info') {
@@ -179,7 +146,7 @@ const useChat=()=>{
     }
 
 
-    return { handleSendMessage, handleSendMessageStream, initClient, handleGetChat, openChat, handleDeleteChat, handleSendEmail };
+    return { handleSendMessageStream, initClient, handleGetChat, openChat, handleDeleteChat, handleSendEmail };
 }
 
 export default useChat;

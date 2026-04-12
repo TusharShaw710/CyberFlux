@@ -13,7 +13,6 @@ export const Sidebar = () => {
     const {openChat,handleDeleteChat,handleGetChat}=useChat();
     
     const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
-    // const [isGmailConnected, setIsGmailConnected] = useState(false);
     const isGmailConnected=useSelector((state)=>state.chat.isGmailConnected);
 
     useEffect(() => {

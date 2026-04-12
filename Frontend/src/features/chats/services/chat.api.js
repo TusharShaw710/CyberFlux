@@ -2,35 +2,24 @@ import axios from 'axios';
 
 
 const api=axios.create({
-    baseURL:"http://localhost:3000/api/chats",
+    baseURL:"http://localhost:3000/api/chat",
     withCredentials:true
 });
 
-async function sendMessage(message,chatId){
-    try{
-        const response=await api.post("/messages",{
-            message,
-            chatId
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error sending message:', error);
-        throw error;
-    }
-}
-
 // Streaming version using fetch with ReadableStream
-async function sendMessageStream(message, chatId, onToken, onComplete, onError) {
+async function sendMessageStream(message, chatId, file, onToken, onComplete, onError) {
     let completeCalled = false;
 
     try {
-        const response = await fetch('http://localhost:3000/api/chats/messages-stream', {
+        const formData = new FormData();
+        if (message) formData.append('message', message);
+        if (chatId) formData.append('chatId', chatId);
+        if (file) formData.append('file', file);
+
+        const response = await fetch('http://localhost:3000/api/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
             credentials: 'include',
-            body: JSON.stringify({ message, chatId })
+            body: formData
         });
 
         if (!response.ok) {
@@ -143,4 +132,4 @@ async function deleteChat(chatId){
 
 
 
-export { sendMessage, sendMessageStream, getMessage, getChatId, getChat, deleteChat };
+export { sendMessageStream, getMessage, getChatId, getChat, deleteChat };

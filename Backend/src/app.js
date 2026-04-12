@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
-app.use('/api/chats', chatRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/email/auth', emailAuthRoutes);
 app.use("/api/file", fileRoutes);
