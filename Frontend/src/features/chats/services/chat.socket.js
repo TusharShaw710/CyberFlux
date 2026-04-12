@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 export function initClient() {
-  const socket = io("http://localhost:3000", {
+  const socket = io("https://cyberflux-yyap.onrender.com", {
     withCredentials: true,
   });
 

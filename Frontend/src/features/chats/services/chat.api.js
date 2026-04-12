@@ -2,7 +2,7 @@ import axios from 'axios';
 
 
 const api=axios.create({
-    baseURL:"http://localhost:3000/api/chat",
+    baseURL:"https://cyberflux-yyap.onrender.com/api/chat",
     withCredentials:true
 });
 
@@ -16,7 +16,7 @@ async function sendMessageStream(message, chatId, file, onToken, onComplete, onE
         if (chatId) formData.append('chatId', chatId);
         if (file) formData.append('file', file);
 
-        const response = await fetch('http://localhost:3000/api/chat', {
+        const response = await fetch('https://cyberflux-yyap.onrender.com/api/chat', {
             method: 'POST',
             credentials: 'include',
             body: formData
