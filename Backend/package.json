@@ -15,6 +15,7 @@
     "@langchain/google-genai": "^2.1.26",
     "@langchain/mistralai": "^1.0.7",
     "@tavily/core": "^0.7.2",
+    "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -27,7 +28,9 @@
     "marked": "^18.0.0",
     "mongoose": "^9.3.1",
     "morgan": "^1.10.1",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.3",
+    "pdf-parse": "^2.4.5",
     "remark-gfm": "^4.0.1",
     "socket.io": "^4.8.3",
     "zod": "^4.3.6"

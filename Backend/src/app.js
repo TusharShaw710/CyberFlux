@@ -7,6 +7,7 @@ import chatRoutes from './routes/chat.routes.js';
 import emailRoutes from './routes/email.routes.js';
 import emailAuthRoutes from './routes/email_auth.routes.js';
 import morgan from 'morgan';
+import fileRoutes from "./routes/file.route.js";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/email/auth', emailAuthRoutes);
+app.use("/api/file", fileRoutes);
 
 // 404 - Not Found Handler
 app.use((req, res) => {

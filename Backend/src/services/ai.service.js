@@ -139,4 +139,4 @@ async function getChatTitle(message) {
   
 }
 
-export { getResponse, getResponseStream, getChatTitle };
+export { getResponse, getResponseStream, getChatTitle,agent };
