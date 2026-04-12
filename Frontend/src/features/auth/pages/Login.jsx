@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DynamicForm } from '../components/form'
 import { useAuth } from '../hooks/useAuth'
@@ -28,11 +28,17 @@ export const Login = () => {
   const {handleLogin}=useAuth();
   const user=useSelector((state)=>state.auth.user);
   const loading=useSelector((state)=>state.auth.loading);
+  const [localError, setLocalError] = useState('');
+
   const handleLoginSubmit = async(formData) => {
-    console.log('Login submit:', formData);
-    const isSuccess=await handleLogin(formData);
-    if(isSuccess){
+    setLocalError('');
+    const result = await handleLogin(formData);
+    
+    // Check if result returned true (success) or an object with success/error
+    if(result === true || result?.success === true){
       navigate("/");
+    } else if (result?.error) {
+      setLocalError(result.error);
     }
   }
 
@@ -92,6 +98,8 @@ export const Login = () => {
           fields={loginFields}
           onSubmit={handleLoginSubmit}
           buttonText="Authenticate"
+          error={localError}
+          onErrorClear={() => setLocalError('')}
           heading={
             <>
               <span style={{color:"#FFFFFF"}}>Access</span> <span style={{ color: '#00FFC2' }}>System</span>

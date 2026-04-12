@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DynamicForm } from '../components/form'
 import {useAuth} from '../hooks/useAuth';
@@ -34,10 +34,17 @@ export const Register = () => {
   const { handleRegister } = useAuth();
   const navigate=useNavigate();
   const loading=useSelector((state)=>state.auth.loading);
+  const [localError, setLocalError] = useState('');
+
   const handleRegisterSubmit = async (formData) => {
-    const isSuccess=await handleRegister(formData);
-    if(isSuccess){
+    setLocalError('');
+    const result = await handleRegister(formData);
+    
+    // Check if result returned true (success) or an object with success/error
+    if(result === true || result?.success === true){
       navigate("/login");
+    } else if (result?.error) {
+      setLocalError(result.error);
     }
   };
 
@@ -93,6 +100,8 @@ export const Register = () => {
           fields={registerFields}
           onSubmit={handleRegisterSubmit}
           buttonText="Initialize"
+          error={localError}
+          onErrorClear={() => setLocalError('')}
           heading={
             <>
              <span style={{color:"#FFFFFF"}}>ESTABLISH</span> <span style={{ color: '#00FFC2' }}>Node</span>

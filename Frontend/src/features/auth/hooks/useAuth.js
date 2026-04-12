@@ -16,7 +16,9 @@ export const useAuth=()=>{
 
         }catch(err){
             console.log(err);
-            dispatch(seterror(err.message || "Registration failed"));
+            const errorMsg = err.response?.data?.message || "Registration failed. Please try again.";
+            dispatch(seterror(errorMsg));
+            return { success: false, error: errorMsg };
         }finally{
             dispatch(setloading(false));
         }
@@ -32,7 +34,9 @@ export const useAuth=()=>{
 
         }catch(err){
             console.log(err);
-            dispatch(seterror(err.message || "Login failed"));
+            const errorMsg = err.response?.data?.message || "Login failed. Invalid credentials or network error.";
+            dispatch(seterror(errorMsg));
+            return { success: false, error: errorMsg };
         }finally{
             dispatch(setloading(false));
         } 

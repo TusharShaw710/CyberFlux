@@ -9,6 +9,8 @@ export const DynamicForm = ({
   heading = 'Form',
   subtitle = 'Please fill in the details',
   toggleLink = null,
+  error = null,
+  onErrorClear = () => {},
 }) => {
   // Initialize form data based on fields parameter
   const [formData, setFormData] = useState(
@@ -28,6 +30,7 @@ export const DynamicForm = ({
       ...prev,
       [name]: value,
     }))
+    onErrorClear(); // Reset error on input change
   }
 
   // Handle form submission
@@ -79,9 +82,16 @@ export const DynamicForm = ({
         </h1>
 
         {/* Subtitle */}
-        <p className="text-center text-sm text-gray-400 mb-8 tracking-wide">
+        <p className="text-center text-sm text-gray-400 mb-6 tracking-wide">
           {subtitle}
         </p>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded mb-4 text-sm text-center font-medium animate-pulse">
+            {error}
+          </div>
+        )}
 
         {/* Dynamic Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
