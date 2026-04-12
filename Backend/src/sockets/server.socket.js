@@ -4,7 +4,7 @@ let io;
 export function initServer(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: "https://cyber-flux.vercel.app",
       credentials: true,
     },
   });
