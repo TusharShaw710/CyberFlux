@@ -5,7 +5,7 @@ export const GmailConnectModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const handleConnect = () => {
-    window.location.href = 'https://cyberflux-yyap.onrender/api/email/auth/google';
+    window.location.href = 'https://cyberflux-yyap.onrender.com/api/email/auth/google';
   };
 
   return (
