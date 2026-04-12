@@ -40,7 +40,7 @@ export async function register(req,res,next){
     },
   });
 
-  const verifyUrl = `https://cyber-flux-crmi.vercel.app/api/auth/verify-email?token=${token}`;
+  const verifyUrl = `https://cyber-flux.vercel.app/api/auth/verify-email?token=${token}`;
   const htmlBody = `
     <p>Hi ${username},</p>
     <p>Thank you for registering at our app! We're excited to have you on board.</p>
@@ -146,7 +146,7 @@ export async function verifyEmail(req,res) {
   const html = `
     <p>Hi ${user.username},</p>
     <p>Your email has been successfully verified! You can now log in to your account and start using our services.</p>
-    <p><a href="${process.env.FRONTEND_URL || 'https://cyber-flux-crmi.vercel.app'}/login">Login Now</a></p>
+    <p><a href="${process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app'}/login">Login Now</a></p>
     <p>If you did not create an account with us, please ignore this message.</p>
     <p>Best regards,<br>The Team</p>
   `;
