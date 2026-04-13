@@ -1,4 +1,4 @@
-import {login,register,GetUser} from "../services/auth.api";
+import {login,register,GetUser,logoutUser} from "../services/auth.api";
 import { setuser,setloading,seterror } from "../auth.slice";
 import { useDispatch } from "react-redux";
 
@@ -58,6 +58,21 @@ export const useAuth=()=>{
         }
     }
 
-    return {handleRegister,handleLogin,handleGetMe};
+    const handleLogout=async()=>{
+        dispatch(setloading(true));
+
+        try{
+            await logoutUser();
+            dispatch(setuser(null));
+
+        }catch(err){
+            console.log(err);
+            dispatch(seterror(err.message || "Error logging out"));
+        }finally{
+            dispatch(setloading(false));
+        }
+    }
+
+    return {handleRegister,handleLogin,handleGetMe,handleLogout};
 }
 

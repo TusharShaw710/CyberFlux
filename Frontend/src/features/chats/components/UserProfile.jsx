@@ -1,7 +1,12 @@
 import React from 'react'
 import { LogOut } from 'lucide-react'
+import { useAuth } from '../features/auth/hooks/useAuth'
+import { useSelector } from 'react-redux'
 
 export const UserProfile = ({ user = { name: 'Alex Chen', status: 'Standard Access', avatar: '👾' } }) => {
+  const { handleLogout } = useAuth();
+  const userDetail=useSelector((state)=>state.auth.user);
+  console.log(userDetail);
   return (
     <div className="p-4 border-t border-white/10">
       <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 backdrop-blur-lg hover:bg-white/10 transition-all duration-300 cursor-pointer group">
@@ -18,7 +23,7 @@ export const UserProfile = ({ user = { name: 'Alex Chen', status: 'Standard Acce
 
         {/* Logout Button */}
         <button className="p-1 rounded-lg hover:bg-white/10 transition-all duration-300 opacity-0 group-hover:opacity-100">
-          <LogOut size={16} className="text-gray-400 hover:text-[#FF00E5]" />
+          <LogOut size={16} className="text-gray-400 hover:text-[#FF00E5]" onClick={handleLogout} />
         </button>
       </div>
     </div>

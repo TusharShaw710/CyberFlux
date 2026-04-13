@@ -34,3 +34,13 @@ export async function GetUser(){
         throw error;
     }
 }
+
+export async function logoutUser() {
+    try {
+        const response = await api.post("/logout");
+        return response.data;
+    } catch (error) {
+        console.error("Logout error:", error);
+        throw error;
+    }
+}
