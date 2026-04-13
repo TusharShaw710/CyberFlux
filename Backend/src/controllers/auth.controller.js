@@ -134,12 +134,15 @@ export async function getUser(req, res) {
 
 export async function verifyEmail(req, res) {
   const { token } = req.query;
+  console.log("Token from request:", token);
 
   try {
     const user = await User.findOne({ 
       verificationToken: token,
-      verificationTokenExpiry: { $gt: Date.now() } // Ensure token hasn't expired
+      verificationTokenExpiry: { $gt: new Date() } // Ensure token hasn't expired using new Date() instead of Date.now()
     });
+
+    console.log("User found:", user);
 
     if (!user) {
       return res.status(400).json({
@@ -158,6 +161,7 @@ export async function verifyEmail(req, res) {
       message: 'Email verified successfully ✅'
     });
   } catch (error) {
+    console.error("Verification error:", error);
     return res.status(500).json({
       success: false,
       message: 'Something went wrong during verification.'
