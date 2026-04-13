@@ -1,6 +1,8 @@
-
 import User from '../models/user.model.js';
-import { sendEmail } from '../services/mail.service.js';
+import { sendEmail } from '../services/gmail.service.js';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -19,11 +21,17 @@ export async function register(req,res,next){
 
 
 
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
   // Create new user
   const newUser = new User({
     username,
     email,
     password,
+    verificationToken,
+    verificationTokenExpiry,
   });
 
   const token = jwt.sign({ email: newUser.email }, process.env.JWT_SECRET);
@@ -40,20 +48,23 @@ export async function register(req,res,next){
     },
   });
 
-  const verifyUrl = `https://cyber-flux.vercel.app/api/auth/verify-email?token=${token}`;
+  const verifyUrl = `${process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app'}/verify-email?token=${verificationToken}`;
   const htmlBody = `
-    <p>Hi ${username},</p>
-    <p>Thank you for registering at our app! We're excited to have you on board.</p>
-    <p>Please verify your email address by clicking the link below:</p>
-    <p><a href="${verifyUrl}">Verify Email</a></p>
-    <p>Best regards,<br>The Team</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f4f4; padding: 20px; border-radius: 10px;">
+      <h2 style="color: #333; text-align: center;">Verify your email</h2>
+      <p style="color: #666; font-size: 16px;">Hi ${username},</p>
+      <p style="color: #666; font-size: 16px;">Welcome to Cyberflux! Your cyberpunk journey is almost ready.</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${verifyUrl}" style="background-color: #00f0ff; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Verify Email</a>
+      </div>
+      <p style="color: #999; font-size: 14px; text-align: center;">If the button doesn't work, copy and paste this link: <br/><a href="${verifyUrl}" style="color: #00f0ff;">${verifyUrl}</a></p>
+      <p style="color: #999; font-size: 14px; text-align: center;">This link expires in 10 minutes.</p>
+    </div>
   `;
-  const textBody = `Hi ${username},\n\nThank you for registering at our app! We're excited to have you on board.\n\nVerify your email: ${verifyUrl}\n\nBest regards,\nThe Team`;
 
-  sendEmail(email, 'Welcome to Our App!', htmlBody, textBody).catch(err => {
-    console.error('Error sending welcome email:', err);
+  sendEmail(email, 'Verify your email - Cyberflux', htmlBody).catch(err => {
+    console.error('Error sending welcome email via Gmail:', err);
   });
-
 };
 
 export async function login(req,res) {
@@ -78,7 +89,7 @@ export async function login(req,res) {
     });
   }
 
-  if(!user.verified) {
+  if(!user.isVerified) {
     return res.status(403).json({
       message: 'Please verify your email before logging in',
       success: false,
@@ -123,26 +134,35 @@ export async function getUser(req, res) {
   });
 }
 
-export async function verifyEmail(req,res) {
+export async function verifyEmail(req, res) {
   const { token } = req.query;
 
-  let decoded = null;
-  const frontendUrl = process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app';
-
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ 
+      verificationToken: token,
+      verificationTokenExpiry: { $gt: Date.now() } // Ensure token hasn't expired
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification link is invalid or expired.'
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiry = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email verified successfully ✅'
+    });
   } catch (error) {
-    return res.redirect(`${frontendUrl}/verify-email?status=error`);
+    return res.status(500).json({
+      success: false,
+      message: 'Something went wrong during verification.'
+    });
   }
-
-  const user = await User.findOne({ email: decoded.email } );
-
-  if (!user) {
-    return res.redirect(`${frontendUrl}/verify-email?status=error`);
-  }
-
-  user.verified = true;
-  await user.save();
-
-  return res.redirect(`${frontendUrl}/verify-email?status=success`);
 }

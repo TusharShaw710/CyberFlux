@@ -42,7 +42,7 @@ export const Register = () => {
     
     // Check if result returned true (success) or an object with success/error
     if(result === true || result?.success === true){
-      navigate("/login");
+      navigate("/verify-email");
     } else if (result?.error) {
       setLocalError(result.error);
     }

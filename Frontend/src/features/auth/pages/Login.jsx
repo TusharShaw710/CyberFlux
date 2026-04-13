@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { DynamicForm } from '../components/form'
 import { useAuth } from '../hooks/useAuth'
-import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import CyberfluxLoader from '../components/CyberfluxLoader';
 
@@ -24,11 +23,22 @@ const loginFields = [
 ]
 
 export const Login = () => {
-  const navigate=useNavigate();
-  const {handleLogin}=useAuth();
-  const user=useSelector((state)=>state.auth.user);
-  const loading=useSelector((state)=>state.auth.loading);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const {handleLogin} = useAuth();
+  const user = useSelector((state) => state.auth.user);
+  const loading = useSelector((state) => state.auth.loading);
   const [localError, setLocalError] = useState('');
+  const [localSuccess, setLocalSuccess] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('verified') === 'true') {
+      setLocalSuccess('Email verified successfully ✅');
+      // Clean up the URL so the message doesn't persist forever
+      navigate('/login', { replace: true });
+    }
+  }, [location, navigate]);
 
   const handleLoginSubmit = async(formData) => {
     setLocalError('');
@@ -92,7 +102,13 @@ export const Login = () => {
       </div>
 
       {/* Right Panel - Auth Component */}
-      <div className="w-full lg:flex-1 h-screen flex items-center justify-center px-4 py-8 relative z-10">
+      <div className="w-full lg:flex-1 h-screen flex items-center justify-center px-4 py-8 relative z-10 flex-col">
+        {localSuccess && (
+          <div className="mb-6 p-4 rounded-md border border-[#00ff00]/40 bg-[#00ff00]/10 text-[#00ff00] text-center w-full max-w-sm shadow-[0_0_15px_rgba(0,255,0,0.2)]">
+            <p className="font-semibold">{localSuccess}</p>
+          </div>
+        )}
+        
         {/* Form Component */}
         <DynamicForm
           fields={loginFields}

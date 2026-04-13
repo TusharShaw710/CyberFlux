@@ -1,14 +1,38 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import axios from 'axios';
 
 const VerifyEmail = () => {
   const location = useLocation();
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState(null); // 'loading' | 'success' | 'error'
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const statusParam = params.get("status");
-    setStatus(statusParam);
+    const token = params.get("token");
+
+    if (!token) {
+      // If there's no token in URL, maybe they just registered and are waiting
+      return; 
+    }
+
+    const verifyToken = async () => {
+      setStatus('loading');
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/auth/verify-email?token=${token}`
+        );
+        if (response.data.success) {
+          setStatus('success');
+        } else {
+          setStatus('error');
+        }
+      } catch (error) {
+        console.error("Verification failed", error);
+        setStatus('error');
+      }
+    };
+
+    verifyToken();
   }, [location.search]);
 
   // Cyberpunk Component Styles
@@ -36,7 +60,7 @@ const VerifyEmail = () => {
             Your connection to the grid has been established.
           </p>
           <Link
-            to="/login"
+            to="/login?verified=true"
             className="group relative inline-flex items-center justify-center px-8 py-3.5 font-semibold tracking-[0.15em] text-white transition-all duration-300 bg-transparent border border-[#00ff00]/70 rounded hover:bg-[#00ff00]/10 hover:shadow-[0_0_25px_rgba(0,255,0,0.4)] overflow-hidden w-full uppercase text-sm"
           >
             <span className="relative z-10">Return to Login</span>
@@ -73,8 +97,26 @@ const VerifyEmail = () => {
         </div>
       );
     }
+
+    if (status === 'loading') {
+      return (
+        <div className="flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
+          <div className="mb-10 relative flex justify-center items-center">
+            <div className="absolute inset-0 bg-[#00f0ff] blur-[40px] opacity-20 rounded-full animate-pulse"></div>
+            
+            <div className="relative w-28 h-28">
+              <div className="absolute inset-0 rounded-full border border-[#00f0ff]/20 border-t-[#00f0ff] animate-[spin_1.5s_linear_infinite]"></div>
+              <div className="absolute inset-2 rounded-full border border-dashed border-[#00f0ff]/40 animate-[spin_2s_linear_infinite_reverse]"></div>
+            </div>
+          </div>
+          <h2 className={`text-2xl md:text-3xl font-bold mb-4 uppercase tracking-[0.1em] ${neonTextBlue}`}>
+            Verifying Token...
+          </h2>
+        </div>
+      );
+    }
     
-    // Default / Null State (Waiting for verification)
+    // Default Null State (Registered and waiting for email)
     return (
       <div className="flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
         <div className="mb-10 relative flex justify-center items-center">
@@ -98,7 +140,7 @@ const VerifyEmail = () => {
         </h2>
         
         <p className="text-zinc-300 font-light mb-8 leading-relaxed max-w-sm text-[15px]">
-          An email has been sent successfully to your email address. Please verify it to proceed.
+          An email has been sent successfully to your email address. Please click the link inside to proceed.
         </p>
         
         <div className="flex items-center justify-center space-x-3 text-[#00f0ff]/80 text-xs font-mono uppercase tracking-widest border border-[#00f0ff]/20 bg-[#00f0ff]/5 px-4 py-2 rounded-full">
