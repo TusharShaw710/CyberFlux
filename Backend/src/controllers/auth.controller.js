@@ -126,35 +126,23 @@ export async function getUser(req, res) {
 export async function verifyEmail(req,res) {
   const { token } = req.query;
 
-  let decoded=null;
+  let decoded = null;
+  const frontendUrl = process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app';
 
   try {
-    decoded=jwt.verify(token,process.env.JWT_SECRET);
-    
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
-    error.message="Invalid Token!!!";
-    error.status=401;
-    throw error;
+    return res.redirect(`${frontendUrl}/verify-email?status=error`);
   }
 
   const user = await User.findOne({ email: decoded.email } );
 
   if (!user) {
-    return res.status(400).json({
-      message: 'Invalid token or user not found'
-    });
+    return res.redirect(`${frontendUrl}/verify-email?status=error`);
   }
 
   user.verified = true;
   await user.save();
 
-  const html = `
-    <p>Hi ${user.username},</p>
-    <p>Your email has been successfully verified! You can now log in to your account and start using our services.</p>
-    <p><a href="${process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app'}/login">Login Now</a></p>
-    <p>If you did not create an account with us, please ignore this message.</p>
-    <p>Best regards,<br>The Team</p>
-  `;
-
-  res.status(200).contentType('text/html').send(html);
+  return res.redirect(`${frontendUrl}/verify-email?status=success`);
 }
