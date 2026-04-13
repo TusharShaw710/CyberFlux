@@ -1,6 +1,6 @@
 import React from 'react'
 import { LogOut } from 'lucide-react'
-import { useAuth } from '../features/auth/hooks/useAuth'
+import { useAuth } from '../../auth/hooks/useAuth.js'
 import { useSelector } from 'react-redux'
 
 export const UserProfile = ({ user = { name: 'Alex Chen', status: 'Standard Access', avatar: '👾' } }) => {
