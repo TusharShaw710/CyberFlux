@@ -3,8 +3,6 @@ import { sendEmail } from '../services/gmail.service.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 
 dotenv.config();
 
