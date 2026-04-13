@@ -17,7 +17,7 @@ export const UserProfile = ({ user = { name: 'Alex Chen', status: 'Standard Acce
 
         {/* User Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+          <p className="text-sm font-semibold text-white truncate">{userDetail.username}</p>
           <p className="text-xs text-gray-400">{user.status}</p>
         </div>
 
