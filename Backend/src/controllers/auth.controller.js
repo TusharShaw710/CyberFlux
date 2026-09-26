@@ -46,7 +46,8 @@ export async function register(req,res,next){
     },
   });
 
-  const verifyUrl = `${process.env.FRONTEND_URL || 'https://cyber-flux.vercel.app'}/verify-email?token=${verificationToken}`;
+  const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+  const verifyUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f4f4; padding: 20px; border-radius: 10px;">
       <h2 style="color: #333; text-align: center;">Verify your email</h2>
@@ -97,10 +98,11 @@ export async function login(req,res) {
 
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
+  const isSecure = process.env.COOKIE_SECURE === 'true';
   res.cookie('token', token, {
     httpOnly: true,
-    secure: true,      // Must be true for sameSite: 'none'
-    sameSite: 'none',  // Required for cross-domain cookies
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
     maxAge: 3600000    // 1 hour
   });
 
@@ -133,10 +135,11 @@ export async function getUser(req, res) {
 }
 
 export async function logout(req, res) {
+  const isSecure = process.env.COOKIE_SECURE === 'true';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none'
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax'
   });
   
   res.status(200).json({

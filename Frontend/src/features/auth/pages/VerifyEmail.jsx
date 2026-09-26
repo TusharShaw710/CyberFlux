@@ -19,7 +19,7 @@ const VerifyEmail = () => {
       setStatus('loading');
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'https://cyberflux-yyap.onrender.com'}/api/auth/verify-email?token=${token}`
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${token}`
         );
         if (response.data.success) {
           setStatus('success');

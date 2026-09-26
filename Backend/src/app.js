@@ -18,9 +18,10 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'http://localhost:5173',
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
   'https://cyber-flux.vercel.app',
-  'https://cyber-flux-crmi.vercel.app',
-  process.env.CLIENT_URL
+  'https://cyber-flux-crmi.vercel.app'
 ].filter(Boolean); // Filter out empty values
 
 app.use(cors({

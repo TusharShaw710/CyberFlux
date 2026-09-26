@@ -45,7 +45,8 @@ export const googleCallback = async (req, res) => {
             { upsert: true, new: true }
         );
 
-        res.redirect("https://cyber-flux.vercel.app/?gmail=connected");
+        const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:5173";
+        res.redirect(`${frontendUrl}/?gmail=connected`);
     } catch (error) {
         console.error('Error occurred while fetching tokens:', error);
         res.status(500).send('Error occurred while fetching tokens.');

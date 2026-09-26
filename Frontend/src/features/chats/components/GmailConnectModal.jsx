@@ -1,11 +1,13 @@
 import React from 'react';
 import { X, Mail } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export const GmailConnectModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const handleConnect = () => {
-    window.location.href = 'https://cyberflux-yyap.onrender.com/api/email/auth/google';
+    window.location.href = `${API_URL}/api/email/auth/google`;
   };
 
   return (
