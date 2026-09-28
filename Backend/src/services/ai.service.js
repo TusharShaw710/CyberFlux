@@ -1,24 +1,22 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { ChatMistralAI } from "@langchain/mistralai";
-import {HumanMessage,AIMessage} from "@langchain/core/messages";
-import {SystemMessage} from "@langchain/core/messages";
+import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import dotenv from 'dotenv';
 import { searchWeb } from "./internet.service.js";
-import { tool,createAgent } from "langchain";
+import { tool, createAgent } from "langchain";
 import * as z from "zod";
 
 dotenv.config();
 
-const geminiModel = new ChatMistralAI({
-  model: "mistral-small-latest",
-  apiKey: process.env.MISTRAL_AI_API_KEY,
+const geminiModel = new ChatGoogleGenerativeAI({
+  model: "gemini-3.5-flash-lite",
+  apiKey: process.env.GEMINI_API_KEY,
   streaming: true
 });
 
-const mistralModel = new ChatMistralAI({
-  model: "mistral-small-latest",
-  apiKey: process.env.MISTRAL_AI_API_KEY,
-  streaming: true
+const titleModel = new ChatGoogleGenerativeAI({
+  model: "gemini-3.5-flash-lite",
+  apiKey: process.env.GEMINI_API_KEY,
+  streaming: false
 });
 
 const searchInternetTool = tool(
@@ -32,9 +30,9 @@ const searchInternetTool = tool(
   }
 );
 
-const agent=createAgent({
-  model:geminiModel,
-  tools:[searchInternetTool]
+const agent = createAgent({
+  model: geminiModel,
+  tools: [searchInternetTool]
 });
 
 async function getResponse(messages) {
@@ -48,7 +46,7 @@ async function getResponse(messages) {
     });
 
     const geminiResponse = await agent.invoke({
-      messages:[
+      messages: [
         new SystemMessage(`You are an AI assistant.
                             RULES:
                             - If the question involves current events, latest info, or unknown facts → MUST use the "searchInternet" tool.
@@ -58,8 +56,8 @@ async function getResponse(messages) {
         ...formattedMessages
       ]
     });
-    return geminiResponse.messages[ geminiResponse.messages.length - 1 ].content;
-  }catch(err){
+    return geminiResponse.messages[geminiResponse.messages.length - 1].content;
+  } catch (err) {
     console.error('Error invoking Gemini model:', err);
     throw new Error('Failed to get AI response: ' + err.message);
   }
@@ -91,7 +89,7 @@ async function getResponseStream(messages, onToken) {
 
     // Extract the response content
     let fullResponse = '';
-    
+
     if (agentResponse.messages && agentResponse.messages.length > 0) {
       // Get the last message (AI response)
       const lastMessage = agentResponse.messages[agentResponse.messages.length - 1];
@@ -126,17 +124,18 @@ async function getResponseStream(messages, onToken) {
 
 async function getChatTitle(message) {
   try {
-    const mistralResponse = await mistralModel.invoke([
+    const response = await titleModel.invoke([
       new SystemMessage("You are a helpful assistant that generates concise and descriptive titles for user queries."),
-      new HumanMessage(`Generate a concise title for the following user query is 2-4 words: "${message}"`)
+      new HumanMessage(`Generate a concise title for the following user query in 2-4 words: "${message}"`)
     ]);
 
-    return mistralResponse.content;
-    
+    const titleText = typeof response.content === 'string' ? response.content.trim() : String(response.content || '').trim();
+    return titleText || (message ? message.trim().slice(0, 30) : "New Chat");
   } catch (error) {
     console.error('Error invoking ChatTitle model:', error.message);
+    // Return a safe fallback title to satisfy database validation
+    return message ? message.trim().slice(0, 30) : "New Chat";
   }
-  
 }
 
-export { getResponse, getResponseStream, getChatTitle,agent };
+export { getResponse, getResponseStream, getChatTitle, agent };

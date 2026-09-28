@@ -1,5 +1,5 @@
 import { readPDF } from "../utils/fileTools.js";
-import { analyzeImageWithMistral } from "./vision.service.js";
+import { analyzeImageWithGemini } from "./vision.service.js";
 import { agent } from "./ai.service.js";
 import { HumanMessage,SystemMessage } from "langchain";
 
@@ -11,7 +11,7 @@ export const processFileWithAI = async (filePath, fileType) => {
     content = await readPDF(filePath);
 
   } else if (fileType.startsWith("image/")) {
-    content = await analyzeImageWithMistral(filePath,fileType);
+    content = await analyzeImageWithGemini(filePath,fileType);
   }else {
     throw new Error("Unsupported file type");
   }
