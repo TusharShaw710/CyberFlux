@@ -13,6 +13,7 @@ const useChat=()=>{
         let finalChatId = chatId;
         let fullResponseMessage = '';
         let messageAdded = false;
+        let thinkingDismissed = false;
 
         try {
             sendMessageStream(
@@ -49,9 +50,11 @@ const useChat=()=>{
                     } else if (typeof token === 'string') {
                         // Accumulate the full response
                         fullResponseMessage += token;
-                        
-                        // Transition from thinking to streaming on first token
-                        dispatch(setThinking(false));
+
+                        if (!thinkingDismissed) {
+                            dispatch(setThinking(false));
+                            thinkingDismissed = true;
+                        }
                         dispatch(addStreamingToken(token));
                     }
                 },
@@ -64,7 +67,7 @@ const useChat=()=>{
                         dispatch(addNewMessage({
                             chatId: finalChatId,
                             message: fullResponseMessage,
-                            role: "ai"
+                            role: "assistant"
                         }));
                         messageAdded = true;
                     }
@@ -115,7 +118,7 @@ const useChat=()=>{
                     return {
                         _id: msg._id,
                         text: msg.content,
-                        role: msg.role,
+                        role: msg.role === 'assistant' ? 'assistant' : msg.role,
                         file: msg.file || null
                     }
                 });

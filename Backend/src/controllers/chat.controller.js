@@ -55,8 +55,10 @@ async function sendMessageUnified(req,res){
             fileContext: fileContext || undefined
         });
 
-        // Get all messages for context
-        const allUserMessages = await messageModel.find({chat: chatId || chat._id});
+        // Build model history from prior conversation only; keep the current request prompt/resource
+        // separate so they are not folded into the user-visible chat history or leaked into future requests.
+        const historicalMessages = await messageModel.find({ chat: chatId || chat._id }).sort({ createdAt: 1 });
+        const priorMessages = historicalMessages.filter(msg => msg._id.toString() !== userMessage._id.toString());
 
         // Send chat info as first event
         res.write(`data: ${JSON.stringify({
@@ -67,27 +69,22 @@ async function sendMessageUnified(req,res){
 
         let fullResponse = '';
         let tokenCount = 0;
-        let tokenSent = false;
 
         try {
-            // Stream the response
-            fullResponse = await getResponseStream(allUserMessages, (token) => {
-                // Only send the token ONCE to avoid duplication
-                if (!tokenSent) {
-                    tokenCount++;
-                    tokenSent = true;
-                    // Send the complete response as a single token event
-                    res.write(`data: ${JSON.stringify({
-                        type: 'token',
-                        content: token
-                    })}\n\n`);
-                }
-            });
+            // Stream the response incrementally as chunks arrive from the model while keeping
+            // the current request prompt and resource context isolated from previous history.
+            fullResponse = await getResponseStream(priorMessages, (token) => {
+                tokenCount++;
+                res.write(`data: ${JSON.stringify({
+                    type: 'token',
+                    content: token
+                })}\n\n`);
+            }, userPrompt, fileContext);
 
             // Save final AI message
             await messageModel.create({
                 chat: chatId || chat._id,
-                role: "ai",
+                role: "assistant",
                 content: fullResponse
             });
 

@@ -35,29 +35,58 @@ const agent = createAgent({
   tools: [searchInternetTool]
 });
 
+const SYSTEM_PROMPT = `You are an AI assistant.
+RULES:
+- If the question involves current events, latest info, or unknown facts → MUST use the "searchInternet" tool.
+- Do NOT guess.
+- Always prefer tool over assumptions.`;
+
+function normalizeMessageContent(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(normalizeMessageContent).join('');
+
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string') return value.text;
+    if (typeof value.content === 'string') return value.content;
+    if (Array.isArray(value.content)) return value.content.map(normalizeMessageContent).join('');
+    if (typeof value.delta === 'string') return value.delta;
+    if (Array.isArray(value.delta)) return value.delta.map(normalizeMessageContent).join('');
+    if (typeof value.output === 'string') return value.output;
+  }
+
+  return '';
+}
+
+function buildModelMessageHistory(historyMessages, currentUserPrompt, resourceContext) {
+  const messages = [new SystemMessage(SYSTEM_PROMPT)];
+
+  for (const message of historyMessages || []) {
+    const content = normalizeMessageContent(message?.content || '').trim();
+    if (!content) continue;
+
+    if (message?.role === 'user') {
+      messages.push(new HumanMessage(content));
+    } else if (message?.role === 'assistant' || message?.role === 'ai') {
+      messages.push(new AIMessage(content));
+    }
+  }
+
+  if (currentUserPrompt && currentUserPrompt.trim()) {
+    messages.push(new HumanMessage(currentUserPrompt.trim()));
+  }
+
+  if (resourceContext && resourceContext.trim()) {
+    messages.push(new HumanMessage(`Attached resource context:\n${resourceContext.trim()}`));
+  }
+
+  return messages;
+}
+
 async function getResponse(messages) {
   try {
-    const formattedMessages = messages.map(msg => {
-      if (msg.role === "user") {
-        const textContent = msg.fileContext
-          ? `${msg.content}\n\n[Attached File Content/Analysis]:\n${msg.fileContext}`
-          : msg.content;
-        return new HumanMessage(textContent);
-      } else {
-        return new AIMessage(msg.content);
-      }
-    });
-
     const geminiResponse = await agent.invoke({
-      messages: [
-        new SystemMessage(`You are an AI assistant.
-                            RULES:
-                            - If the question involves current events, latest info, or unknown facts → MUST use the "searchInternet" tool.
-                            - Do NOT guess.
-                            - Always prefer tool over assumptions.
-`),
-        ...formattedMessages
-      ]
+      messages: buildModelMessageHistory(messages, null, null)
     });
     return geminiResponse.messages[geminiResponse.messages.length - 1].content;
   } catch (err) {
@@ -66,59 +95,78 @@ async function getResponse(messages) {
   }
 }
 
+function extractAssistantText(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value.map(extractAssistantText).join('');
+  }
+
+  if (typeof value === 'object') {
+    if (typeof value.text === 'string') return value.text;
+    if (typeof value.content === 'string') return value.content;
+    if (Array.isArray(value.content)) {
+      return value.content
+        .map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item.text === 'string') return item.text;
+          if (item && item.type === 'text' && typeof item.text === 'string') return item.text;
+          return '';
+        })
+        .join('');
+    }
+    if (typeof value.delta === 'string') return value.delta;
+    if (typeof value.output === 'string') return value.output;
+    if (typeof value.result === 'string') return value.result;
+
+    if (Array.isArray(value.messages)) {
+      const lastMessage = value.messages[value.messages.length - 1];
+      return extractAssistantText(lastMessage);
+    }
+  }
+
+  return '';
+}
+
 // Streaming version with callback for token handling
-async function getResponseStream(messages, onToken) {
+async function getResponseStream(messages, onToken, currentUserPrompt = '', resourceContext = '') {
   try {
-    const formattedMessages = messages.map(msg => {
-      if (msg.role === "user") {
-        const textContent = msg.fileContext
-          ? `${msg.content}\n\n[Attached File Content/Analysis]:\n${msg.fileContext}`
-          : msg.content;
-        return new HumanMessage(textContent);
-      } else {
-        return new AIMessage(msg.content);
-      }
-    });
+    const input = {
+      messages: buildModelMessageHistory(messages, currentUserPrompt, resourceContext)
+    };
 
-    // Use invoke instead of stream since agent with tools needs to execute sequentially
-    const agentResponse = await agent.invoke({
-      messages: [
-        new SystemMessage(`You are an AI assistant.
-                            RULES:
-                            - If the question involves current events, latest info, or unknown facts → MUST use the "searchInternet" tool.
-                            - Do NOT guess.
-                            - Always prefer tool over assumptions.
-`),
-        ...formattedMessages
-      ]
-    });
-
-    // Extract the response content
     let fullResponse = '';
 
-    if (agentResponse.messages && agentResponse.messages.length > 0) {
-      // Get the last message (AI response)
-      const lastMessage = agentResponse.messages[agentResponse.messages.length - 1];
-      fullResponse = lastMessage.content || '';
-    } else if (typeof agentResponse === 'string') {
-      fullResponse = agentResponse;
-    } else if (agentResponse.content) {
-      fullResponse = agentResponse.content;
-    } else if (agentResponse.output) {
-      fullResponse = agentResponse.output;
-    }
+    if (agent && typeof agent.stream === 'function') {
+      try {
+        const stream = await agent.stream(input);
 
-    // Guard: ensure fullResponse is not empty
-    fullResponse = String(fullResponse || '');
+        for await (const chunk of stream) {
+          const chunkText = extractAssistantText(chunk);
+          if (chunkText) {
+            fullResponse += chunkText;
+            if (onToken) {
+              onToken(chunkText);
+            }
+          }
+        }
+      } catch (streamError) {
+        console.warn('Streaming agent failed; falling back to standard invoke:', streamError);
+      }
+    }
 
     if (!fullResponse.trim()) {
-      fullResponse = "I couldn't process your request. Please try again.";
-    }
+      const agentResponse = await agent.invoke(input);
+      const resolvedResponse = extractAssistantText(agentResponse);
+      fullResponse = String(resolvedResponse || '').trim();
 
-    // Emit the complete response as a single token
-    // This avoids duplication of the message
-    if (onToken) {
-      onToken(fullResponse);
+      if (!fullResponse) {
+        fullResponse = "I couldn't process your request. Please try again.";
+      }
+
+      if (onToken) {
+        onToken(fullResponse);
+      }
     }
 
     return fullResponse;
@@ -144,4 +192,4 @@ async function getChatTitle(message) {
   }
 }
 
-export { getResponse, getResponseStream, getChatTitle, agent };
+export { getResponse, getResponseStream, getChatTitle, agent };

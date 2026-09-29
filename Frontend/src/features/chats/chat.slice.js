@@ -11,7 +11,7 @@ const chatSlice=createSlice({
         error:null,
         isThinking: false,
         streamingMessage: '',
-        streamingMessageRole: 'ai',
+        streamingMessageRole: 'assistant',
         isGmailConnected: false
     },
     reducers:{

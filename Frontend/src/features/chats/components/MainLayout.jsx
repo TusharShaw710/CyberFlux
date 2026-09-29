@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux'
 export const MainLayout = ({ onMenuClick }) => {
   const [dots, setDots] = useState('.');
   const messagesEndRef = useRef(null);
+  const lastScrollTimeRef = useRef(0);
 
   const chats=useSelector((state)=>state.chat.chats);
   const currentChatId=useSelector((state)=>state.chat.currentChatId);
@@ -27,10 +28,14 @@ export const MainLayout = ({ onMenuClick }) => {
     }
   }, [isThinking]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive, throttled during streaming
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      const now = Date.now();
+      if (now - lastScrollTimeRef.current > 150) {
+        lastScrollTimeRef.current = now;
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   }, [chats[currentChatId]?.messages, isThinking, streamingMessage]);
 

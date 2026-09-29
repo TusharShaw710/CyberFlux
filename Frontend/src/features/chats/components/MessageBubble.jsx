@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Mail, Paperclip } from 'lucide-react'
@@ -6,11 +6,35 @@ import { EmailModal } from './EmailModal'
 import { Toast } from './Toast'
 import { useSelector } from 'react-redux' 
 
-export const MessageBubble = ({ message, role, file, isStreaming = false }) => {
+export const MessageBubble = React.memo(({ message, role, file, isStreaming = false }) => {
   const [displayCursor, setDisplayCursor] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const isGmailConnected=useSelector((state)=>state.chat.isGmailConnected);
+
+  const markdownComponents = useMemo(() => ({
+    h1: ({node, ...props}) => <h1 className="text-3xl font-bold text-[#00FFC2] mt-4 mb-3" {...props} />,
+    h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-[#00FFC2] mt-4 mb-3" {...props} />,
+    h3: ({node, ...props}) => <h3 className="text-lg font-bold text-white mt-3 mb-2" {...props} />,
+    ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 my-3 ml-4" {...props} />,
+    ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 my-3 ml-4" {...props} />,
+    li: ({node, ...props}) => <li className="text-sm" {...props} />,
+    p: ({node, ...props}) => <p className="my-3 leading-relaxed" {...props} />,
+    strong: ({node, ...props}) => <strong className="text-[#00FFC2]" {...props} />,
+    em: ({node, ...props}) => <em className="text-gray-300" {...props} />,
+    code: ({node, inline, ...props}) =>
+      inline ? (
+        <code className="bg-white/10 px-2 py-1 rounded text-[#00FFC2] text-xs" {...props} />
+      ) : (
+        <code className="block bg-white/10 p-3 rounded my-3 text-xs overflow-x-auto" {...props} />
+      ),
+    table: ({node, ...props}) => <table className="w-full border-collapse my-3" {...props} />,
+    thead: ({node, ...props}) => <thead className="bg-white/5" {...props} />,
+    tbody: ({node, ...props}) => <tbody {...props} />,
+    tr: ({node, ...props}) => <tr className="border-b border-white/10" {...props} />,
+    th: ({node, ...props}) => <th className="px-4 py-2 text-left text-[#00FFC2] font-bold" {...props} />,
+    td: ({node, ...props}) => <td className="px-4 py-2 text-white" {...props} />,
+  }), []);
 
   useEffect(() => {
     if (isStreaming) {
@@ -49,29 +73,7 @@ export const MessageBubble = ({ message, role, file, isStreaming = false }) => {
         ) : (
           <div className="text-sm text-white leading-relaxed markdown-content">
             <ReactMarkdown
-              components={{
-                h1: ({node, ...props}) => <h1 className="text-3xl font-bold text-[#00FFC2] mt-4 mb-3" {...props} />,
-                h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-[#00FFC2] mt-4 mb-3" {...props} />,
-                h3: ({node, ...props}) => <h3 className="text-lg font-bold text-white mt-3 mb-2" {...props} />,
-                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 my-3 ml-4" {...props} />,
-                ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 my-3 ml-4" {...props} />,
-                li: ({node, ...props}) => <li className="text-sm" {...props} />,
-                p: ({node, ...props}) => <p className="my-3 leading-relaxed" {...props} />,
-                strong: ({node, ...props}) => <strong className="text-[#00FFC2]" {...props} />,
-                em: ({node, ...props}) => <em className="text-gray-300" {...props} />,
-                code: ({node, inline, ...props}) => 
-                  inline ? (
-                    <code className="bg-white/10 px-2 py-1 rounded text-[#00FFC2] text-xs" {...props} />
-                  ) : (
-                    <code className="block bg-white/10 p-3 rounded my-3 text-xs overflow-x-auto" {...props} />
-                  ),
-                table: ({node, ...props}) => <table className="w-full border-collapse my-3" {...props} />,
-                thead: ({node, ...props}) => <thead className="bg-white/5" {...props} />,
-                tbody: ({node, ...props}) => <tbody {...props} />,
-                tr: ({node, ...props}) => <tr className="border-b border-white/10" {...props} />,
-                th: ({node, ...props}) => <th className="px-4 py-2 text-left text-[#00FFC2] font-bold" {...props} />,
-                td: ({node, ...props}) => <td className="px-4 py-2 text-white" {...props} />,
-              }}
+              components={markdownComponents}
               remarkPlugins={[remarkGfm]}
             >
               {message}
@@ -110,4 +112,4 @@ export const MessageBubble = ({ message, role, file, isStreaming = false }) => {
       )}
     </div>
   )
-}
+})

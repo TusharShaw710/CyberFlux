@@ -53,17 +53,9 @@ async function sendMessageStream(message, chatId, file, onToken, onComplete, onE
                         const data = JSON.parse(line.replace('data: ', ''));
                         
                         if (data.type === 'token') {
-                            // Split response into chunks for streaming animation
                             const token = data.content;
-                            const words = token.split(' ');
-                            
-                            // Emit each word individually for typing effect
-                            for (const word of words) {
-                                if (word.trim()) {
-                                    onToken(word + ' ');
-                                    // Small delay between words for animation
-                                    await new Promise(resolve => setTimeout(resolve, 30));
-                                }
+                            if (typeof token === 'string' && token.trim()) {
+                                onToken(token);
                             }
                         } else if (data.type === 'chat_info') {
                             onToken({ type: 'chat_info', chatId: data.chatId, title: data.title });
