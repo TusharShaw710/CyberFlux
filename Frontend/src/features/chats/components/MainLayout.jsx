@@ -7,12 +7,14 @@ import { useSelector } from 'react-redux'
 export const MainLayout = ({ onMenuClick }) => {
   const [dots, setDots] = useState('.');
   const messagesEndRef = useRef(null);
-  const lastScrollTimeRef = useRef(0);
+  const shouldStickToBottomRef = useRef(true);
+  const scrollFrameRef = useRef(null);
 
   const chats=useSelector((state)=>state.chat.chats);
   const currentChatId=useSelector((state)=>state.chat.currentChatId);
   const isThinking=useSelector((state)=>state.chat.isThinking);
   const streamingMessage=useSelector((state)=>state.chat.streamingMessage);
+  const isStreaming=useSelector((state)=>state.chat.isStreaming);
 
   // Animate thinking dots
   useEffect(() => {
@@ -28,16 +30,19 @@ export const MainLayout = ({ onMenuClick }) => {
     }
   }, [isThinking]);
 
-  // Auto-scroll to bottom when new messages arrive, throttled during streaming
+  // Follow new content while the user is near the bottom; preserve manual scroll-up.
   useEffect(() => {
-    if (messagesEndRef.current) {
-      const now = Date.now();
-      if (now - lastScrollTimeRef.current > 150) {
-        lastScrollTimeRef.current = now;
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+    if (shouldStickToBottomRef.current && messagesEndRef.current && scrollFrameRef.current === null) {
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+        scrollFrameRef.current = null;
+      });
     }
-  }, [chats[currentChatId]?.messages, isThinking, streamingMessage]);
+  }, [chats[currentChatId]?.messages, isThinking, streamingMessage, isStreaming]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-screen relative overflow-hidden" style={{
@@ -57,7 +62,10 @@ export const MainLayout = ({ onMenuClick }) => {
       <ChatHeader onMenuClick={onMenuClick} />
 
       {/* Chat Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent" onScroll={(event) => {
+        const element = event.currentTarget;
+        shouldStickToBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 100;
+      }}>
         {chats[currentChatId]?.messages.length === 0 || !chats[currentChatId]?.messages ? (
           // Hero Section
           <div className="flex items-center justify-center h-full px-8">
@@ -101,7 +109,7 @@ export const MainLayout = ({ onMenuClick }) => {
             )}
 
             {/* Streaming Message */}
-            {streamingMessage && (
+            {isStreaming && (
               <MessageBubble 
                 key="streaming-message"
                 message={streamingMessage} 

@@ -129,7 +129,7 @@ function extractAssistantText(value) {
 }
 
 // Streaming version with callback for token handling
-async function getResponseStream(messages, onToken, currentUserPrompt = '', resourceContext = '') {
+async function getResponseStream(messages, onToken, currentUserPrompt = '', resourceContext = '', signal) {
   try {
     const input = {
       messages: buildModelMessageHistory(messages, currentUserPrompt, resourceContext)
@@ -137,37 +137,20 @@ async function getResponseStream(messages, onToken, currentUserPrompt = '', reso
 
     let fullResponse = '';
 
-    if (agent && typeof agent.stream === 'function') {
-      try {
-        const stream = await agent.stream(input);
+    if (!agent || typeof agent.stream !== 'function') throw new Error('The configured AI agent does not support streaming');
 
-        for await (const chunk of stream) {
-          const chunkText = extractAssistantText(chunk);
-          if (chunkText) {
-            fullResponse += chunkText;
-            if (onToken) {
-              onToken(chunkText);
-            }
-          }
-        }
-      } catch (streamError) {
-        console.warn('Streaming agent failed; falling back to standard invoke:', streamError);
-      }
+    // Agent .stream() emits graph state updates. streamEvents() emits the
+    // underlying chat model's actual chunks while it is generating.
+    const stream = await agent.streamEvents(input, { version: 'v2', signal });
+    for await (const event of stream) {
+      if (event?.event !== 'on_chat_model_stream') continue;
+      const chunkText = extractAssistantText(event.data?.chunk);
+      if (!chunkText) continue;
+      fullResponse += chunkText;
+      onToken?.(chunkText);
     }
 
-    if (!fullResponse.trim()) {
-      const agentResponse = await agent.invoke(input);
-      const resolvedResponse = extractAssistantText(agentResponse);
-      fullResponse = String(resolvedResponse || '').trim();
-
-      if (!fullResponse) {
-        fullResponse = "I couldn't process your request. Please try again.";
-      }
-
-      if (onToken) {
-        onToken(fullResponse);
-      }
-    }
+    if (!fullResponse.trim()) throw new Error('The AI response stream completed without assistant text');
 
     return fullResponse;
   } catch (err) {

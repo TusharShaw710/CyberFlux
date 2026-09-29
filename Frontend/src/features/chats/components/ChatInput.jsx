@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Send, Paperclip, X } from 'lucide-react'
+import { Send, Paperclip, X, Square } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import useChat from '../hooks/useChat.js'
 
@@ -8,7 +8,8 @@ export const ChatInput = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
   const currentChatId=useSelector((state)=>state.chat.currentChatId);
-  const {handleSendMessageStream}=useChat();
+  const isStreaming=useSelector((state)=>state.chat.isStreaming);
+  const {handleSendMessageStream, stopGeneration}=useChat();
 
   const handleSend = () => {
     if (message.trim() || selectedFile) {
@@ -80,13 +81,19 @@ export const ChatInput = () => {
           </div>
 
           {/* Send Button */}
-          <button
-            onClick={handleSend}
-            disabled={!message.trim() && !selectedFile}
-            className="p-3 rounded-xl bg-linear-to-r from-[#00FFC2] to-[#3D5AFE] text-black font-semibold hover:shadow-lg hover:shadow-[#00FFC2]/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
-          >
-            <Send size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
-          </button>
+          {isStreaming ? (
+            <button onClick={stopGeneration} aria-label="Stop generation" title="Stop generation" className="p-3 rounded-xl bg-red-500/80 text-white hover:bg-red-500 transition-colors">
+              <Square size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!message.trim() && !selectedFile}
+              className="p-3 rounded-xl bg-linear-to-r from-[#00FFC2] to-[#3D5AFE] text-black font-semibold hover:shadow-lg hover:shadow-[#00FFC2]/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+            >
+              <Send size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
+            </button>
+          )}
         </div>
       </div>
     </div>

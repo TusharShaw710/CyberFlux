@@ -14,9 +14,16 @@ async function sendMessageUnified(req,res){
         }
 
         // Set SSE headers (CORS is already handled by middleware)
-        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders?.();
+        const streamAbort = new AbortController();
+        const abortOnDisconnect = () => {
+            if (!res.writableEnded) streamAbort.abort();
+        };
+        req.once('aborted', abortOnDisconnect);
+        res.once('close', abortOnDisconnect);
 
         let title = null, chat = null;
 
@@ -24,23 +31,29 @@ async function sendMessageUnified(req,res){
         const userPrompt = rawMessage || (req.file ? `[Attached File: ${req.file.originalname}]` : "");
         let fileContext = "";
 
+        // Make the conversation visible immediately. Title generation and resource
+        // extraction can take time, but neither needs to delay the SSE handshake.
+        if (!chatId) {
+            title = userPrompt.slice(0, 48) || "New Chat";
+            chat = await chatModel.create({ title, user: req.user.id });
+        } else {
+            chat = await chatModel.findById(chatId);
+        }
+
+        res.write(`data: ${JSON.stringify({
+            type: 'chat_info',
+            chatId: chat._id,
+            title: title || chat.title
+        })}\n\n`);
+
+        const generatedTitle = !chatId ? getChatTitle(userPrompt) : null;
+
         if (req.file) {
             try {
                 fileContext = await extractFileContent(req.file.path, req.file.mimetype);
             } catch (err) {
                 console.error("Error processing file", err);
             }
-        }
-
-        // Create or get chat
-        if(!chatId){
-            title = await getChatTitle(userPrompt);
-            chat = await chatModel.create({
-                title: title,
-                user: req.user.id
-            });
-        } else {
-            chat = await chatModel.findById(chatId);
         }
 
         // Save user message with original prompt and separate file context/metadata
@@ -60,26 +73,23 @@ async function sendMessageUnified(req,res){
         const historicalMessages = await messageModel.find({ chat: chatId || chat._id }).sort({ createdAt: 1 });
         const priorMessages = historicalMessages.filter(msg => msg._id.toString() !== userMessage._id.toString());
 
-        // Send chat info as first event
-        res.write(`data: ${JSON.stringify({
-            type: 'chat_info',
-            chatId: chat._id,
-            title: title || chat.title
-        })}\n\n`);
-
         let fullResponse = '';
         let tokenCount = 0;
+        let assistantSaved = false;
 
         try {
             // Stream the response incrementally as chunks arrive from the model while keeping
             // the current request prompt and resource context isolated from previous history.
-            fullResponse = await getResponseStream(priorMessages, (token) => {
+            const streamedResponse = await getResponseStream(priorMessages, (token) => {
+                fullResponse += token;
+                if (res.destroyed || res.writableEnded) return;
                 tokenCount++;
                 res.write(`data: ${JSON.stringify({
                     type: 'token',
                     content: token
                 })}\n\n`);
-            }, userPrompt, fileContext);
+            }, userPrompt, fileContext, streamAbort.signal);
+            fullResponse = streamedResponse;
 
             // Save final AI message
             await messageModel.create({
@@ -87,6 +97,15 @@ async function sendMessageUnified(req,res){
                 role: "assistant",
                 content: fullResponse
             });
+            assistantSaved = true;
+
+            if (generatedTitle) {
+                title = await generatedTitle;
+                await chatModel.findByIdAndUpdate(chat._id, { title });
+                if (!res.destroyed && !res.writableEnded) {
+                    res.write(`data: ${JSON.stringify({ type: 'title_update', title })}\n\n`);
+                }
+            }
 
             // Send completion event
             res.write(`data: ${JSON.stringify({
@@ -96,6 +115,14 @@ async function sendMessageUnified(req,res){
 
             res.end();
         } catch(streamErr){
+            if (fullResponse.trim() && !assistantSaved) {
+                await messageModel.create({
+                    chat: chatId || chat._id,
+                    role: "assistant",
+                    content: fullResponse
+                });
+            }
+            if (res.destroyed || res.writableEnded || streamAbort.signal.aborted) return;
             console.error('Error in streaming:', streamErr.message);
             res.write(`data: ${JSON.stringify({
                 type: 'error',

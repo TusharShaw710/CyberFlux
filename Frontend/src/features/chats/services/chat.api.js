@@ -8,8 +8,9 @@ const api=axios.create({
 });
 
 // Streaming version using fetch with ReadableStream
-async function sendMessageStream(message, chatId, file, onToken, onComplete, onError) {
+async function sendMessageStream(message, chatId, file, onToken, onComplete, onError, signal) {
     let completeCalled = false;
+    let doneReceived = false;
 
     try {
         const formData = new FormData();
@@ -20,7 +21,8 @@ async function sendMessageStream(message, chatId, file, onToken, onComplete, onE
         const response = await fetch(`${API_URL}/api/chat`, {
             method: 'POST',
             credentials: 'include',
-            body: formData
+            body: formData,
+            signal
         });
 
         if (!response.ok) {
@@ -49,26 +51,29 @@ async function sendMessageStream(message, chatId, file, onToken, onComplete, onE
             for (let i = 0; i < lines.length - 1; i++) {
                 const line = lines[i];
                 if (line.startsWith('data: ')) {
+                    let data;
                     try {
-                        const data = JSON.parse(line.replace('data: ', ''));
-                        
-                        if (data.type === 'token') {
-                            const token = data.content;
-                            if (typeof token === 'string' && token.trim()) {
-                                onToken(token);
-                            }
-                        } else if (data.type === 'chat_info') {
-                            onToken({ type: 'chat_info', chatId: data.chatId, title: data.title });
-                        } else if (data.type === 'done') {
-                            if (onComplete && !completeCalled) {
-                                completeCalled = true;
-                                onComplete(data);
-                            }
-                        } else if (data.type === 'error') {
-                            if (onError) onError(new Error(data.message));
-                        }
+                        data = JSON.parse(line.slice(6));
                     } catch (parseErr) {
                         console.error('Error parsing SSE data:', parseErr);
+                        continue;
+                    }
+
+                    if (data.type === 'token') {
+                        if (typeof data.content === 'string' && data.content.length > 0) onToken(data.content);
+                    } else if (data.type === 'chat_info') {
+                        onToken({ type: 'chat_info', chatId: data.chatId, title: data.title });
+                    } else if (data.type === 'title_update') {
+                        onToken({ type: 'title_update', title: data.title });
+                    } else if (data.type === 'done') {
+                        doneReceived = true;
+                        if (onComplete && !completeCalled) {
+                            completeCalled = true;
+                            onComplete(data);
+                        }
+                    } else if (data.type === 'error') {
+                        doneReceived = true;
+                        onError?.(new Error(data.message || 'The AI stream failed'));
                     }
                 }
             }
@@ -76,9 +81,35 @@ async function sendMessageStream(message, chatId, file, onToken, onComplete, onE
             // Keep the last incomplete line in the buffer
             buffer = lines[lines.length - 1];
         }
+        buffer += decoder.decode();
+        if (buffer.startsWith('data: ')) {
+            try {
+                const data = JSON.parse(buffer.slice(6));
+                if (data.type === 'token') onToken(data.content);
+                else if (data.type === 'title_update') onToken({ type: 'title_update', title: data.title });
+                else if (data.type === 'error') {
+                    doneReceived = true;
+                    onError?.(new Error(data.message || 'The AI stream failed'));
+                } else if (data.type === 'done' && onComplete && !completeCalled) {
+                    doneReceived = true;
+                    completeCalled = true;
+                    onComplete(data);
+                }
+            } catch (parseErr) {
+                console.error('Error parsing final SSE event:', parseErr);
+            }
+        }
+        if (!doneReceived && !completeCalled && onError) onError(new Error('The AI stream ended before completion'));
     } catch (error) {
-        console.error('Error setting up stream:', error);
-        if (onError) onError(error);
+        if (error.name === 'AbortError') {
+            if (onComplete && !completeCalled) {
+                completeCalled = true;
+                onComplete({ aborted: true });
+            }
+        } else {
+            console.error('Error setting up stream:', error);
+            if (onError) onError(error);
+        }
     }
 }
 

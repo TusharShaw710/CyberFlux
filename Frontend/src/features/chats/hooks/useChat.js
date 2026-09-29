@@ -1,14 +1,34 @@
 import { initClient } from "../services/chat.socket";
 import { sendMessageStream, getMessage, getChat, getChatId, deleteChat } from "../services/chat.api";
 import { useDispatch } from "react-redux";
-import { setLoading, setChats, setCurrentChatId, setError, createNewChat, addNewMessage, addMessages, setThinking, addStreamingToken, clearStreamingMessage } from "../chat.slice";
+import { useRef } from "react";
+import { setLoading, setChats, setCurrentChatId, setError, createNewChat, updateChatTitle, addNewMessage, addMessages, setThinking, startStreamingMessage, addStreamingToken, clearStreamingMessage } from "../chat.slice";
 
 const useChat=()=>{
     const dispatch=useDispatch();
+    const abortControllerRef = useRef(null);
+    const pendingTokensRef = useRef('');
+    const animationFrameRef = useRef(null);
+
+    function flushPendingTokens() {
+        if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+        if (pendingTokensRef.current) {
+            dispatch(addStreamingToken(pendingTokensRef.current));
+            pendingTokensRef.current = '';
+        }
+    }
+
+    function stopGeneration() {
+        abortControllerRef.current?.abort();
+    }
 
 
     async function handleSendMessageStream(message, chatId, file) {
         dispatch(setThinking(true));
+        dispatch(startStreamingMessage());
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
         let streamStarted = false;
         let finalChatId = chatId;
         let fullResponseMessage = '';
@@ -16,7 +36,7 @@ const useChat=()=>{
         let thinkingDismissed = false;
 
         try {
-            sendMessageStream(
+            await sendMessageStream(
                 message,
                 chatId,
                 file,
@@ -47,6 +67,9 @@ const useChat=()=>{
                             }));
                             streamStarted = true;
                         }
+                        dispatch(setThinking(false));
+                    } else if (typeof token === 'object' && token.type === 'title_update') {
+                        dispatch(updateChatTitle({ chatId: finalChatId, title: token.title }));
                     } else if (typeof token === 'string') {
                         // Accumulate the full response
                         fullResponseMessage += token;
@@ -55,11 +78,15 @@ const useChat=()=>{
                             dispatch(setThinking(false));
                             thinkingDismissed = true;
                         }
-                        dispatch(addStreamingToken(token));
+                        pendingTokensRef.current += token;
+                        if (animationFrameRef.current === null) {
+                            animationFrameRef.current = requestAnimationFrame(flushPendingTokens);
+                        }
                     }
                 },
                 (completeData) => {
                     // Stream completed - clear streaming first, then add to messages
+                    flushPendingTokens();
                     dispatch(clearStreamingMessage());
                     
                     // Only add message if it hasn't been added yet and has content
@@ -74,14 +101,27 @@ const useChat=()=>{
                 },
                 (error) => {
                     console.error('Stream error:', error);
+                    flushPendingTokens();
                     dispatch(setError("Failed to stream message. Please try again."));
                     dispatch(clearStreamingMessage());
-                }
+                    if (!messageAdded && fullResponseMessage.trim() && finalChatId) {
+                        dispatch(addNewMessage({
+                            chatId: finalChatId,
+                            message: fullResponseMessage,
+                            role: "assistant"
+                        }));
+                        messageAdded = true;
+                    }
+                },
+                abortController.signal
             );
         } catch (err) {
             console.log(err);
+            flushPendingTokens();
             dispatch(setError("Failed to send message. Please try again."));
             dispatch(clearStreamingMessage());
+        } finally {
+            if (abortControllerRef.current === abortController) abortControllerRef.current = null;
         }
     }
 
@@ -153,7 +193,7 @@ const useChat=()=>{
     }
 
 
-    return { handleSendMessageStream, initClient, handleGetChat, openChat, handleDeleteChat, handleSendEmail };
+    return { handleSendMessageStream, stopGeneration, initClient, handleGetChat, openChat, handleDeleteChat, handleSendEmail };
 }
 
 export default useChat;

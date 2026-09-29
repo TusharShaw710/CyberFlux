@@ -11,6 +11,7 @@ const chatSlice=createSlice({
         error:null,
         isThinking: false,
         streamingMessage: '',
+        isStreaming: false,
         streamingMessageRole: 'assistant',
         isGmailConnected: false
     },
@@ -68,12 +69,22 @@ const chatSlice=createSlice({
         },
         setStreamingMessage:(state,action)=>{
             state.streamingMessage=action.payload;
+            state.isStreaming=true;
+        },
+        updateChatTitle:(state,action)=>{
+            const {chatId,title}=action.payload;
+            if (state.chats[chatId]) state.chats[chatId].title=title;
+        },
+        startStreamingMessage:(state)=>{
+            state.streamingMessage='';
+            state.isStreaming=true;
         },
         addStreamingToken:(state,action)=>{
             state.streamingMessage+=action.payload;
         },
         clearStreamingMessage:(state)=>{
             state.streamingMessage='';
+            state.isStreaming=false;
             state.isThinking=false;
         },
         setGmailConnected:(state,action)=>{
@@ -82,6 +93,6 @@ const chatSlice=createSlice({
     }
 })
 
-export const {setChats,setCurrentChatId,setLoading,setError,createNewChat,addNewMessage,addMessages,setThinking,setStreamingMessage,addStreamingToken,clearStreamingMessage,setGmailConnected}=chatSlice.actions;
+export const {setChats,setCurrentChatId,setLoading,setError,createNewChat,updateChatTitle,addNewMessage,addMessages,setThinking,setStreamingMessage,startStreamingMessage,addStreamingToken,clearStreamingMessage,setGmailConnected}=chatSlice.actions;
 
 export default chatSlice.reducer;
