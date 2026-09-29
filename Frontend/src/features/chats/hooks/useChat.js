@@ -37,10 +37,12 @@ const useChat=()=>{
                         
                         // Add user message after chat is created
                         if (!streamStarted) {
+                            const userDisplayPrompt = message.trim() || (file ? `[Attached File: ${file.name}]` : "");
                             dispatch(addNewMessage({
                                 chatId: finalChatId,
-                                message: message,
-                                role: "user"
+                                message: userDisplayPrompt,
+                                role: "user",
+                                file: file ? { name: file.name, fileType: file.type } : null
                             }));
                             streamStarted = true;
                         }
@@ -111,8 +113,10 @@ const useChat=()=>{
                 const {messages}=await getMessage(chatId);
                 const formatMessages=messages.map((msg)=>{
                     return {
-                        text:msg.content,
-                        role:msg.role
+                        _id: msg._id,
+                        text: msg.content,
+                        role: msg.role,
+                        file: msg.file || null
                     }
                 });
 

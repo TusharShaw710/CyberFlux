@@ -76,7 +76,7 @@ export const MainLayout = ({ onMenuClick }) => {
           // Messages
           <div className="p-8 space-y-6 max-w-4xl mx-auto relative z-10">
             {chats[currentChatId]?.messages.map((msg) => (
-              <MessageBubble key={msg._id} message={msg.text} role={msg.role} />
+              <MessageBubble key={msg._id || msg.text} message={msg.text} role={msg.role} file={msg.file} />
             ))}
             
             {/* Thinking State */}

@@ -25,7 +25,7 @@ const chatSlice=createSlice({
             }
         },
         addNewMessage:(state,action)=>{
-            const {chatId,message,role}=action.payload;
+            const {chatId,message,role,file,_id}=action.payload;
             // Guard: only add message if chat exists
             if(state.chats[chatId]){
                 // Prevent duplicate messages - check if last message has same content
@@ -34,7 +34,12 @@ const chatSlice=createSlice({
                 
                 // Don't add if it's a duplicate of the last message (same role and content)
                 if (!lastMessage || lastMessage.role !== role || lastMessage.text !== message) {
-                    state.chats[chatId].messages.push({text:message,role:role});
+                    state.chats[chatId].messages.push({
+                        _id: _id || Date.now().toString() + Math.random().toString(36).substring(2, 5),
+                        text: message,
+                        role: role,
+                        file: file || null
+                    });
                     state.chats[chatId].updatedAt=new Date().toISOString();
                 }
             }
@@ -42,7 +47,7 @@ const chatSlice=createSlice({
         addMessages:(state,action)=>{
             const {chatId,messages}=action.payload;
             if(state.chats[chatId]){
-                state.chats[chatId].messages.push(...messages);
+                state.chats[chatId].messages = messages;
                 state.chats[chatId].updatedAt=new Date().toISOString();
             }
         },

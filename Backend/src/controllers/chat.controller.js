@@ -1,7 +1,7 @@
 import { getResponse, getResponseStream, getChatTitle } from "../services/ai.service.js";
 import messageModel from "../models/message.model.js";
 import chatModel from "../models/chat.model.js";
-import { processFileWithAI } from "../services/fileAI.service.js";
+import { extractFileContent } from "../services/fileAI.service.js";
 
 async function sendMessageUnified(req,res){
     try{
@@ -20,12 +20,13 @@ async function sendMessageUnified(req,res){
 
         let title = null, chat = null;
 
-        // Extract File if exists
-        let finalMessage = message || "";
+        const rawMessage = (message || "").trim();
+        const userPrompt = rawMessage || (req.file ? `[Attached File: ${req.file.originalname}]` : "");
+        let fileContext = "";
+
         if (req.file) {
             try {
-                const fileSummary = await processFileWithAI(req.file.path, req.file.mimetype);
-                finalMessage += finalMessage ? `\n\n[Attached File Content/Analysis]:\n${fileSummary}` : `[Attached File Content/Analysis]:\n${fileSummary}`;
+                fileContext = await extractFileContent(req.file.path, req.file.mimetype);
             } catch (err) {
                 console.error("Error processing file", err);
             }
@@ -33,7 +34,7 @@ async function sendMessageUnified(req,res){
 
         // Create or get chat
         if(!chatId){
-            title = await getChatTitle(finalMessage);
+            title = await getChatTitle(userPrompt);
             chat = await chatModel.create({
                 title: title,
                 user: req.user.id
@@ -42,11 +43,16 @@ async function sendMessageUnified(req,res){
             chat = await chatModel.findById(chatId);
         }
 
-        // Save user message
+        // Save user message with original prompt and separate file context/metadata
         const userMessage = await messageModel.create({
             chat: chatId || chat._id,
             role: "user",
-            content: finalMessage
+            content: userPrompt,
+            file: req.file ? {
+                name: req.file.originalname,
+                fileType: req.file.mimetype
+            } : undefined,
+            fileContext: fileContext || undefined
         });
 
         // Get all messages for context

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Mail } from 'lucide-react'
+import { Mail, Paperclip } from 'lucide-react'
 import { EmailModal } from './EmailModal'
 import { Toast } from './Toast'
 import { useSelector } from 'react-redux' 
 
-export const MessageBubble = ({ message, role, isStreaming = false }) => {
+export const MessageBubble = ({ message, role, file, isStreaming = false }) => {
   const [displayCursor, setDisplayCursor] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -35,9 +35,17 @@ export const MessageBubble = ({ message, role, isStreaming = false }) => {
         }`}
       >
         {role === 'user' ? (
-          <p className="text-sm text-white leading-relaxed">
-            {message}
-          </p>
+          <div>
+            {file?.name && (
+              <div className="flex items-center gap-1.5 text-xs text-[#00FFC2] mb-1.5 font-medium">
+                <Paperclip size={12} />
+                <span>{file.name}</span>
+              </div>
+            )}
+            <p className="text-sm text-white leading-relaxed">
+              {message}
+            </p>
+          </div>
         ) : (
           <div className="text-sm text-white leading-relaxed markdown-content">
             <ReactMarkdown

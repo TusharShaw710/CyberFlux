@@ -39,7 +39,10 @@ async function getResponse(messages) {
   try {
     const formattedMessages = messages.map(msg => {
       if (msg.role === "user") {
-        return new HumanMessage(msg.content);
+        const textContent = msg.fileContext
+          ? `${msg.content}\n\n[Attached File Content/Analysis]:\n${msg.fileContext}`
+          : msg.content;
+        return new HumanMessage(textContent);
       } else {
         return new AIMessage(msg.content);
       }
@@ -68,7 +71,10 @@ async function getResponseStream(messages, onToken) {
   try {
     const formattedMessages = messages.map(msg => {
       if (msg.role === "user") {
-        return new HumanMessage(msg.content);
+        const textContent = msg.fileContext
+          ? `${msg.content}\n\n[Attached File Content/Analysis]:\n${msg.fileContext}`
+          : msg.content;
+        return new HumanMessage(textContent);
       } else {
         return new AIMessage(msg.content);
       }
